@@ -262,7 +262,7 @@ plot_college
 write.csv(all_data, "ncaa-data.csv")
 
 ```
-You can download the csv file from my GitHub account here: [Get CSV](https://raw.githubusercontent.com/jeremy-harris/webscrape-ncaaf/master/ncaa-data.csv).
+You can download the csv file from my GitHub account here: <a href="https://raw.githubusercontent.com/jeremy-harris/webscrape-ncaaf/master/ncaa-data.csv" download="ncaa-data.csv">Get CSV File</a>
 
 ##Let Me Know!
 If you have a stat that you want to see or something you'd like to know...please email me. I'll do my best to build it in the model. 
