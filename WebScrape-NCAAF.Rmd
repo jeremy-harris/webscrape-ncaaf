@@ -1,0 +1,272 @@
+---
+title: "Web Scrape Project - College Football by State"
+author: "Jeremy Harris"
+subtitle: "https://github.com/jeremy-harris/webscrape-ncaaf"
+date: "May 06, 2020"
+output:
+  html_document: default
+  pdf_document: default
+editor_options: 
+  chunk_output_type: console
+---
+
+#Web Scraping 247 for WV Recruting Data
+I take the publicly available data on www.247sports.com and pull the last 10 years of signee data for all football players in the state of West Virginia. The method of pulling the data is to build a data pipeline that simply extracts the important information and creates a dataset. In r, there is a package called `rvest` that is designed for exactly this. I show a few interesting plots and then dump the data to a csv file so that it can be easily shared. 
+
+##The Data
+I first have to check out https://247sports.com/Season/2020-Football/Commits/ to see what format the website is in and what code (HTML or XML) is used to display the data on the screen from their database. I do this using Google Chrome by right-click on the screen and select `View Page Source`. I can tell by looking at the format of each individual player listed that the format is in HTML. 
+
+
+```{r, include = FALSE}
+#load libraries
+library(rvest)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(gridExtra)
+library(maps)
+library(ggmap)
+library(mapdata)
+library(jsonlite)
+```
+
+
+##Find the Data I Want
+I need to get the CSS code for the data that I actually want to pull. I use SelectorGadget for this installed on a Chrome browser. From there, I build out a dataframe for each variable in on the website so that I can add these dataframes together when all of the data has been extracted. Once I had a working web scraper that pulled the data and I was able to drop the code into a for loop to iterate through all years of interest and then output to a dataframe that I use for plotting the data.
+
+
+##Now I Want to Iterate Through All 10 Years
+I plan to convert this into an application where a person can select their state of interest and the years of interest and the web scraper will automatically pull all of the data. To do this, I need to create variables for the year and state and then insert those variables into the website address so that I pull the correct data (both state and year). Then, I need to repeat all of my code for all 10 years. I'll create a for loop that will run through this code for every year of interest. **Code hidden from output - available on my github page.**
+
+```{r, include = FALSE, warning=FALSE}
+#set years variable
+state = "WV"
+years = c(2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020)
+
+all_data <- as.data.frame(NULL)
+
+for (i in years) {
+  #read in html site by year and state
+  web_link <- paste0("https://247sports.com/Season/",i ,"-Football/Commits/?RecruitState=",state)
+  web247_in <- read_html(web_link)
+  
+  #pull the body of the html site
+  web_body <- web247_in %>%
+  html_node("body") %>%
+  html_children()
+  
+  #######################################################
+  #Pull out all data from website by variable & clean up#
+  commit_names <- html_nodes(web_body, '.ri-page__name-link') %>%
+  html_text() %>%
+  as.data.frame()
+  commit_names <- separate(commit_names, ., c("first", "last"), sep="\\s", extra="merge")
+
+  commit_town <- html_nodes(web_body, '.meta') %>%
+  html_text()
+  #clean up town names
+  commit_town <- regmatches(commit_town, gregexpr("(?<=\\().*?(?=\\,)",commit_town, perl = T))
+
+  commit_pos <- html_nodes(web_body, '.position') %>%
+  html_text() %>%
+  trimws()
+
+
+  commit_size <- html_nodes(web_body, '.metrics') %>%
+  html_text() %>%
+  trimws() %>%
+  as.data.frame()
+  #clean up height/weight -- remove partial inches & separate into feet, inches, weight
+  commit_size$. <- gsub('\\.5', "", commit_size$.)
+  commit_size <- separate(commit_size, ., c("feet", "inches", "weight"))
+  feet <- as.data.frame(commit_size[1])
+  feet$feet <- as.numeric(feet$feet)
+  inches <- as.data.frame(commit_size[2])
+  inches$inches <- as.numeric(inches$inches)/12
+  weight <- as.list(commit_size[3])
+
+
+  commit_rating <- html_nodes(web_body, '.ri-page__star-and-score .score') %>%
+  html_text() %>%
+  as.numeric
+  #change NA to 0
+  commit_rating[is.na(commit_rating)] <- 0
+  commit_rating <- as.data.frame(commit_rating)
+
+
+  commit_natl <- html_nodes(web_body, '.natrank') %>%
+  html_text() %>%
+  as.numeric()
+  #change NA to 0
+  commit_natl[is.na(commit_natl)] <- 0
+  commit_natl <- as.data.frame(commit_natl)
+
+
+  commit_posrank <- html_nodes(web_body, '.posrank') %>%
+  html_text() %>%
+  as.numeric()
+  #change NA to 0
+  commit_posrank[is.na(commit_posrank)] <- 0
+  commit_posrank <- as.data.frame(commit_posrank)
+
+  commit_strank <- html_nodes(web_body, '.sttrank') %>%
+  html_text() %>%
+  as.numeric()
+  #change NA to 0
+  commit_strank[is.na(commit_strank)] <- 0
+  commit_strank <- as.data.frame(commit_strank)
+
+  commit_college <- html_nodes(web_body, ".img-link .jsonly") %>%
+  html_attr("title")
+
+  #################################
+  #Compile into a single dataframe#
+  
+  
+  #create single dataframe
+  clean_data <- commit_names %>%
+  mutate("town" = commit_town, 
+         "pos" = commit_pos, 
+         "height" = (feet$feet+inches$inches)) %>%
+  cbind(weight, commit_rating, commit_natl, commit_posrank, commit_strank) %>%
+  mutate("college" = commit_college,
+         "year" = i)
+
+  #set proper data structures
+  clean_data <- as.data.frame(lapply(clean_data, unlist))
+  clean_data$weight <- as.numeric(levels(clean_data$weight))[clean_data$weight]
+  clean_data$first <- as.character(clean_data$first)
+  clean_data$last <- as.character(clean_data$last)
+  clean_data$town <- as.character(clean_data$town)
+  
+  ###############################################
+  # Print out single dataframe with all results#
+  
+  all_data <- rbind(all_data, clean_data)
+}
+
+```
+
+##Get Geocoordinates for Each Town of Commit
+I'll extract all unique town names and then utilize an API from www.developer.tomtom.com that will allow me to pull the lat/long for each city/state combination. I'll then insert the lat/long into a new dataframe and plot the locations of each commit.**Code hidden from output - available on my github page.**
+```{r, include=FALSE}
+#get unique town names
+api_key <- "uCkPDPmacsZIPqhzzHdXsHTZkGSmrbTS"
+
+geo_towns <- all_data %>%
+  select(town) %>%
+  distinct()
+
+#remove replace space for formatting to tomtom
+geo_towns2 <- sub(" ", "%20", geo_towns$town)
+
+latlongs <- NULL
+ll <- NULL
+for (i in geo_towns2) {
+  latlong_link <- paste0("https://api.tomtom.com/search/2/geocode/",i ,"%2C",state,".json?storeResult=false&typeahead=false&limit=1&countrySet=US&key=",api_key)
+
+  js <- fromJSON(latlong_link)
+  lat <- js$results$position$lat
+  lon <- js$results$position$lon
+  
+  ll <- cbind(i, lat,lon)
+  latlongs <- rbind(latlongs, ll)
+  Sys.sleep(1) #wait 1 seconds between requests so I don't time out the server
+}    
+
+latlongs <- as.data.frame(latlongs) %>%
+  mutate("town" = i) %>%
+  select(-i)
+latlongs$town <- sub("%20", " ", latlongs$town)
+
+#put the lat longs in the dataset
+geo_data <- left_join(all_data, latlongs, by = "town")
+geo_data$lat <- as.numeric(levels(geo_data$lat))[geo_data$lat]
+geo_data$lon <- as.numeric(levels(geo_data$lon))[geo_data$lon]
+
+#remove any incorrect/accidental entries from another state based on lat and lon
+rm_out <- which(geo_data$lon < mean(geo_data$lon-5) | (geo_data$lon > mean(geo_data$lon+5)) |
+                  (geo_data$lat < mean(geo_data$lat-5)) | (geo_data$lat > mean(geo_data$lat+5)))
+
+geo_data <- geo_data[-rm_out,]
+```
+
+##Plot The Data
+My for loop worked and successful compiled all of the data for each year into a single dataframe. I want to create a few plots to explore the data visually. The first plot is the most complicated showing the state map with a point for each commit, shaded by year and sized by number of commits from that town in the time period. **Code hidden from output - available on my github page.**
+
+```{r, include = FALSE}
+state2 = "west virginia"
+
+#setup variables for all states and counties in the US
+us <- map_data("state")
+counties <- map_data("county")
+
+#setup variables for state
+state_map <- subset(us, region %in% state2)
+counties_map <- subset(counties, region == state2)
+```
+```{r, include = FALSE}
+#count number of times the town appears
+geo_count <- geo_data %>%
+  group_by(town) %>%
+  count(town) %>%
+  rename(tot_signed = n)
+
+
+geo_plot_data <- left_join(geo_data, geo_count, by="town")
+
+state_plot <- ggplot(state_map, mapping = aes(x = long, y = lat), group = group) +
+  coord_fixed(1.3) +
+  geom_polygon(color = "black", fill = "gray") +
+  geom_point(data = geo_plot_data, aes(x=lon, y=lat, size = tot_signed, color = year)) +
+  labs(title = "Commits Colored by Year & Sized by Total",
+       subtitle=state,
+       fill="Total",
+       plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust=0.5))
+```
+```{r, echo = FALSE}
+state_plot
+```
+
+
+This plot is a little easier to generate and shows where the commits went over the time period. **Code hidden from output - available on my github page.**
+
+```{r, include = FALSE}
+#count number of commits to a college by town
+qty_town_coll <- geo_plot_data %>%
+  filter(tot_signed >2) %>%
+  group_by(town, college) %>%
+  count(town) %>%
+  rename(by_town = n)
+
+plot_college <- ggplot(qty_town_coll, aes(x=town, y=by_town, fill=college, label=by_town)) + 
+  geom_bar(stat="identity") +
+  geom_text(size=3, position = position_stack(vjust=0.5)) +
+  labs(title = "Comits By Town w/More Than 2, Colored by College",
+       subtitle=state,
+       x="Town",
+       y="Number of Commits",
+       fill="College") +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust=0.5),
+        axis.text.x = element_text(angle=45, hjust = 1)) +
+  scale_y_continuous(breaks = c(1:50))
+```
+```{r, echo = FALSE}
+plot_college
+```
+
+##Just Want The Data?
+
+```{r, include=FALSE}
+#write to csv file
+write.csv(all_data, "ncaa-data.csv")
+
+```
+You can download the csv file from my GitHub account here: https://github.com/jeremy-harris/webscrape/blob/master/ncaa-data.csv.
+
+##Let Me Know!
+If you have a stat that you want to see or something you'd like to know...please email me. I'll do my best to build it in the model. 
+
+Thanks!
+
+jeremy.scott.harris@gmail.com
