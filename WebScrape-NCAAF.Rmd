@@ -242,8 +242,8 @@ qty_town_coll <- geo_plot_data %>%
 plot_college <- ggplot(qty_town_coll, aes(x=town, y=by_town, fill=college, label=by_town)) + 
   geom_bar(stat="identity") +
   geom_text(size=3, position = position_stack(vjust=0.5)) +
-  labs(title = "Commits By Town w/More Than 1, Colored by College",
-       subtitle=state,
+  labs(title = "Commits By Town Colored by College",
+       subtitle=paste0(state, " - More Than 1 Commit"),
        x="Town",
        y="Number of Commits",
        fill="College") +
@@ -314,7 +314,7 @@ plot_num <- ggplot(qty_num_coll, aes(x=college, y=n, label=n, fill=n)) +
         axis.text.x = element_text(angle=45, hjust = 1)) +
   scale_y_continuous(breaks = c(1:50))
 ```
-```{r, echo = FALSE}
+```{r, echo = FALSE, fig.align='center'}
 plot_num
 ```
 
