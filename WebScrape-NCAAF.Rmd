@@ -234,7 +234,7 @@ This plot is a little easier to generate and shows where the commits went over t
 ```{r, include = FALSE}
 #count number of commits to a college by town
 qty_town_coll <- geo_plot_data %>%
-  filter(tot_signed >2) %>%
+  filter(tot_signed >1) %>%
   group_by(town, college) %>%
   count(town) %>%
   rename(by_town = n)
@@ -242,7 +242,7 @@ qty_town_coll <- geo_plot_data %>%
 plot_college <- ggplot(qty_town_coll, aes(x=town, y=by_town, fill=college, label=by_town)) + 
   geom_bar(stat="identity") +
   geom_text(size=3, position = position_stack(vjust=0.5)) +
-  labs(title = "Comits By Town w/More Than 2, Colored by College",
+  labs(title = "Commits By Town w/More Than 1, Colored by College",
        subtitle=state,
        x="Town",
        y="Number of Commits",
@@ -254,6 +254,70 @@ plot_college <- ggplot(qty_town_coll, aes(x=town, y=by_town, fill=college, label
 ```{r, echo = FALSE}
 plot_college
 ```
+
+This plot is a little easier to generate and shows the position of the commits by town. **Code hidden from output - available on my github page.**
+
+```{r, include = FALSE}
+#count number of commits positions by town
+qty_pos_coll <- geo_plot_data %>%
+  group_by(town, pos) %>%
+  count(town) %>%
+  rename(by_town = n)
+qty_pos_coll$pos  <- as.character(qty_pos_coll$pos)
+
+#convert positions to simplify plot
+o_line <- which(qty_pos_coll$pos == "OG" | qty_pos_coll$pos == "OT" |
+                  qty_pos_coll$pos == "OC")
+qty_pos_coll[o_line,]$pos = "OL"
+
+d_end <- which(qty_pos_coll$pos == "WDE" | qty_pos_coll$pos == "SDE")
+qty_pos_coll[d_end,]$pos = "DE"
+
+d_lb <- which(qty_pos_coll$pos == "OLB" | qty_pos_coll$pos == "ILB")
+qty_pos_coll[d_lb,]$pos = "LB"
+
+
+
+plot_pos <- ggplot(qty_pos_coll, aes(x=town, y=by_town, fill=pos, label=by_town)) + 
+  geom_bar(stat="identity") +
+  geom_text(size=3, position = position_stack(vjust=0.5)) +
+  labs(title = "Commits By Town Colored by Position",
+       subtitle=state,
+       x="Town",
+       y="Number of Commits",
+       fill="Position") +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust=0.5),
+        axis.text.x = element_text(angle=45, hjust = 1)) +
+  scale_y_continuous(breaks = c(1:50))
+```
+```{r, echo = FALSE}
+plot_pos
+```
+
+This plot is a little easier to generate and shows the colleges by number of commits. **Code hidden from output - available on my github page.**
+
+```{r, include = FALSE}
+#count number of commits positions by town
+qty_num_coll <- geo_plot_data %>%
+  select(college) %>%
+  count(college) %>%
+    filter(n > 1)
+
+plot_num <- ggplot(qty_num_coll, aes(x=college, y=n, label=n, fill=n)) + 
+  geom_bar(stat="identity") +
+  geom_text(size=3, position = position_stack(vjust=0.5)) +
+  labs(title = "Commits by College (Showing Colleges with 2+ Commits)",
+       subtitle=state,
+       x="College",
+       y="Number of Commits") +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust=0.5),
+        axis.text.x = element_text(angle=45, hjust = 1)) +
+  scale_y_continuous(breaks = c(1:50))
+```
+```{r, echo = FALSE}
+plot_num
+```
+
 
 ##Just Want The Data?
 
