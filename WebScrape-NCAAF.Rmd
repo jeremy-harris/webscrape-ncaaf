@@ -224,7 +224,7 @@ state_plot <- ggplot(state_map, mapping = aes(x = long, y = lat), group = group)
        fill="Total",
        plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust=0.5))
 ```
-```{r, echo = FALSE}
+```{r, echo = FALSE, fig.align='center'}
 state_plot
 ```
 
@@ -251,7 +251,7 @@ plot_college <- ggplot(qty_town_coll, aes(x=town, y=by_town, fill=college, label
         axis.text.x = element_text(angle=45, hjust = 1)) +
   scale_y_continuous(breaks = c(1:50))
 ```
-```{r, echo = FALSE}
+```{r, echo = FALSE, fig.align='center'}
 plot_college
 ```
 
@@ -290,7 +290,7 @@ plot_pos <- ggplot(qty_pos_coll, aes(x=town, y=by_town, fill=pos, label=by_town)
         axis.text.x = element_text(angle=45, hjust = 1)) +
   scale_y_continuous(breaks = c(1:50))
 ```
-```{r, echo = FALSE}
+```{r, echo = FALSE, fig.align='center'}
 plot_pos
 ```
 
