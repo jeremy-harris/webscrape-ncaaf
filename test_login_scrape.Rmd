@@ -1,0 +1,84 @@
+---
+title: "test_login_scrape"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = FALSE}
+#load libraries
+library(rvest)
+library(httr)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(gridExtra)
+library(maps)
+library(ggmap)
+library(mapdata)
+library(jsonlite)
+library(reticulate)
+```
+
+Testing out a simple python code chunk here. I'm able to scape the website for names and get them into a dataframe.
+
+Now I'm going to work on passing the login information to see if we can pull more than 50. 
+```{python}
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+url = "https://247sports.com/Season/2010-Football/Commits/?RecruitState=AL"
+headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/573.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36'}
+res = requests.get(url, headers=headers)
+soup = BeautifulSoup(res.text)
+
+commit_names = soup.select(".ri-page__name-link")
+
+#get all names in a dataframe
+cn_len = len(commit_names)
+cnames=[]
+cols=['names']
+for x in range(cn_len):
+  cnames.append([commit_names[x].text])
+
+df = pd.DataFrame(cnames, columns=cols)
+df = df.names.str.split(expand=True)
+df.columns = ['first', 'last']
+print(df)
+```
+
+```{r, include = FALSE, warning=FALSE}
+#set years variable
+
+#let's test the code with just 3 states to see if we can create a single dataset with 3 states and 15 years
+
+
+#read in html site by year and state
+GET("https://247sports.com/Season/2010-Football/Commits/?RecruitState=AL",
+    set_cookies()
+
+web_link <- "https://247sports.com/Season/2010-Football/Commits/?RecruitState=AL"
+web247_in <- read_html(web_link)
+fields <- c("__VIEWSTATE","__VIEWSTATEGENERATOR")
+viewheaders <- lapply(fields, function(x) {
+  xml_attr(xml_find_first(web247_in, paste0(".//input[@id='",x,"']")), "value")
+})
+names(viewheaders) <- fields
+
+
+  #pull the body of the html site
+  web_body <- web247_in %>%
+  html_node("body") %>%
+  html_children()
+  
+  #######################################################
+  #Pull out all data from website by variable & clean up#
+  commit_names <- html_nodes(web_body, '.ri-page__name-link') %>%
+  html_text() %>%
+  as.data.frame()
+  commit_names <- separate(commit_names, ., c("first", "last"), sep="\\s", extra="merge")
+  
+```
