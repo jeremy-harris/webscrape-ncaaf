@@ -22,9 +22,9 @@ library(jsonlite)
 library(reticulate)
 ```
 
-Testing out a simple python code chunk here. I'm able to scape the website for names and get them into a dataframe.
+Testing out a simple python code chunk here. I'm able to scape the website for names and get them into a dataframe. I want to try python b/c I think we can pass user/login information easier with python than we can with R.
 
-Now I'm going to work on passing the login information to see if we can pull more than 50. 
+Now I'm going to work on passing the login information to see if we can pull more than 50. More to come....
 ```{python}
 import requests
 from bs4 import BeautifulSoup
